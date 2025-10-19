@@ -88,6 +88,7 @@ class AppState {
 
     updateHeaderState() {
         const header = document.getElementById('header');
+        if (!header) return;
         if (this.scrollPosition > CONFIG.scroll.headerScrollThreshold) {
             header.classList.add('scrolled');
         } else {
@@ -557,6 +558,7 @@ class NavigationManager {
 
         // Fechar menu ao clicar fora
         document.addEventListener('click', (e) => {
+            if (!this.navLinks || !this.mobileMenu) return;
             if (this.isMenuOpen && !this.navLinks.contains(e.target) && !this.mobileMenu.contains(e.target)) {
                 this.closeMobileMenu();
             }
@@ -718,31 +720,21 @@ class FormManager {
                 return;
             }
 
-            if (this.useExternalService) {
-                e.preventDefault();
+            const action = this.contactForm.getAttribute('action') || '';
+            if (/formsubmit\.co/i.test(action)) {
                 const submitButton = this.contactForm.querySelector('button[type="submit"]');
-                const originalText = submitButton.innerHTML;
-                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-                submitButton.disabled = true;
-
-                try {
-                    const formData = new FormData(this.contactForm);
-                    await fetch(this.externalEndpoint, {
-                        method: 'POST',
-                        body: formData,
-                        mode: 'no-cors'
-                    });
-
-                    // Redireciona localmente para a página de obrigado
-                    window.location.href = 'thank-you.html';
-                } catch (error) {
-                    this.showErrorMessage();
-                    submitButton.disabled = false;
-                    submitButton.innerHTML = originalText;
+                if (submitButton) {
+                    const originalText = submitButton.innerHTML;
+                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+                    submitButton.disabled = true;
                 }
+
+                // Envio nativo para respeitar o redirect via _next
+                this.contactForm.submit();
                 return;
             }
 
+            // Fluxo interno (se houver)
             e.preventDefault();
             await this.submitForm();
         });
@@ -763,9 +755,12 @@ class FormManager {
 
     async submitForm() {
         const submitButton = this.contactForm.querySelector('button[type="submit"]');
-        const originalText = submitButton.innerHTML;
-        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-        submitButton.disabled = true;
+        const originalText = submitButton ? submitButton.innerHTML : null;
+
+        if (submitButton) {
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            submitButton.disabled = true;
+        }
 
         try {
             await this.simulateAPICall();
@@ -773,8 +768,12 @@ class FormManager {
         } catch (error) {
             this.showErrorMessage();
         } finally {
-            submitButton.disabled = false;
-            submitButton.innerHTML = originalText;
+            if (submitButton) {
+                submitButton.disabled = false;
+                if (originalText !== null) {
+                    submitButton.innerHTML = originalText;
+                }
+            }
         }
     }
 
@@ -782,7 +781,7 @@ class FormManager {
         return new Promise((resolve, reject) => {
             setTimeout(() => {
                 // Simular 90% de chance de sucesso
-                Math.random() > 0.1 ? resolve() : reject();
+                Math.random() > 0.1 ? resolve() : reject(new Error('Falha simulada'));
             }, 2000);
         });
     }
@@ -810,8 +809,12 @@ class FormManager {
             border: 1px solid ${type === 'success' ? '#00ff88' : '#ff6b6b'};
         `;
 
+        // Evitar acúmulo de mensagens
+        const oldMsg = this.contactForm.querySelector('.form-message');
+        if (oldMsg) oldMsg.remove();
+
         this.contactForm.insertBefore(messageDiv, this.contactForm.firstChild);
-        
+
         // Remover após 5 segundos
         setTimeout(() => {
             messageDiv.remove();
@@ -1196,6 +1199,15 @@ class PerformanceOptimizer {
         this.setupPerformanceMonitoring();
         this.optimizeAnimations();
         this.setupResourceManagement();
+        this.optimizeImages();
+    }
+
+    optimizeImages() {
+        const imgs = document.querySelectorAll('img');
+        imgs.forEach(img => {
+            if (!img.hasAttribute('loading')) img.setAttribute('loading', 'lazy');
+            if (!img.hasAttribute('decoding')) img.setAttribute('decoding', 'async');
+        });
     }
 
     setupPerformanceMonitoring() {
@@ -1290,24 +1302,31 @@ class App {
 
     setup() {
         try {
-            // Inicializar módulos na ordem correta
+            // Módulos essenciais primeiro (rápida interação)
             this.modules.state = new AppState();
             this.modules.performance = new PerformanceOptimizer();
-            this.modules.particles = new ParticlesManager();
-            this.modules.cursor = new AdvancedCursor();
-            this.modules.animations = new AnimationManager();
-            this.modules.typing = new AdvancedTypingEffect();
             this.modules.navigation = new NavigationManager();
             this.modules.form = new FormManager();
-            this.modules.portfolio = new PortfolioManager();
-            this.modules.slider = new AutoSlider();
-            this.modules.video = new VideoManager();
 
-            console.log('🚀 Aplicação inicializada com sucesso!');
-            
-            // Disparar evento de inicialização
-            document.dispatchEvent(new CustomEvent('appReady'));
-            
+            // Módulos pesados depois, em idle (melhor tempo de interação)
+            const initHeavy = () => {
+                this.modules.particles = new ParticlesManager();
+                this.modules.cursor = new AdvancedCursor();
+                this.modules.animations = new AnimationManager();
+                this.modules.typing = new AdvancedTypingEffect();
+                this.modules.portfolio = new PortfolioManager();
+                this.modules.slider = new AutoSlider();
+                this.modules.video = new VideoManager();
+
+                console.log('🚀 Aplicação inicializada com módulos visuais!');
+                document.dispatchEvent(new CustomEvent('appReady'));
+            };
+
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(initHeavy, { timeout: 1500 });
+            } else {
+                setTimeout(initHeavy, 0);
+            }
         } catch (error) {
             console.error('❌ Erro na inicialização da aplicação:', error);
         }
