@@ -1071,7 +1071,14 @@ header.scrolled {
     font-size: 1.8rem;
 }
 
-.service-card p {
+.service-card p,
+.dashboard-card p,
+.portfolio-item p,
+.manychat-feature p {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
+    line-height: 1.5;
     color: #BBBBBB;
 }
 
@@ -1326,6 +1333,7 @@ header.scrolled {
     height: 100%;
     background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path fill="rgba(255,255,255,0.1)" d="M0,0 L1000,0 L1000,1000 L0,1000 Z"></path></svg>');
     background-size: cover;
+    pointer-events: none;
 }
 
 .contact h2 {
@@ -1601,21 +1609,28 @@ footer {
     }
     
     .container {
-        padding: 0 16px;
+        padding: 0 14px;
     }
 
     section {
-        padding: 70px 0;
+        padding: 80px 0;
     }
 
     .service-card,
     .dashboard-card,
-    .video-item,
-    .project-slide,
-    .portfolio-item {
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-        border-radius: 16px;
+    .portfolio-item,
+    .manychat-feature {
+        padding: 16px;
+        border-radius: 14px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
     }
+
+    h1 { font-size: clamp(2rem, 6.2vw, 3rem); }
+    h2 { font-size: clamp(1.6rem, 5.2vw, 2.4rem); }
+    h3 { font-size: clamp(1.1rem, 3.8vw, 1.5rem); }
+
+    #particles-js { display: none !important; }
+    .custom-cursor, .cursor-follower { display: none !important; }
 
     /* Overlay do menu mobile */
     .nav-links {

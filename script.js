@@ -646,9 +646,11 @@ class FormManager {
     }
 
     setupFormValidation() {
+          // Ignorar inputs hidden e honeypot para não travar
         const inputs = this.contactForm.querySelectorAll('input, textarea');
         
         inputs.forEach(input => {
+            if (input.type === 'hidden' || input.name === '_honey' || input.offsetParent === null) return;
             input.addEventListener('blur', () => this.validateField(input));
             input.addEventListener('input', () => this.clearError(input));
         });
@@ -730,8 +732,7 @@ class FormManager {
                 }
 
                 // Envio nativo para respeitar o redirect via _next
-                this.contactForm.submit();
-                return;
+                return; // Allow form to submit naturally
             }
 
             // Fluxo interno (se houver)
@@ -741,10 +742,12 @@ class FormManager {
     }
 
     validateForm() {
+        // Somente validar campos visíveis e não-ocultos
         const inputs = this.contactForm.querySelectorAll('input, textarea');
         let isValid = true;
 
         inputs.forEach(input => {
+            if (input.type === 'hidden' || input.name === '_honey' || input.offsetParent === null) return;
             if (!this.validateField(input)) {
                 isValid = false;
             }
@@ -1302,14 +1305,21 @@ class App {
 
     setup() {
         try {
-            // Módulos essenciais primeiro (rápida interação)
+            // Essenciais
             this.modules.state = new AppState();
             this.modules.performance = new PerformanceOptimizer();
             this.modules.navigation = new NavigationManager();
-            this.modules.form = new FormManager();
+            // Removido: this.modules.form = new FormManager();
 
-            // Módulos pesados depois, em idle (melhor tempo de interação)
+            const isMobile = this.modules.state?.isMobile ?? (window.innerWidth <= 768);
+
             const initHeavy = () => {
+                if (isMobile) {
+                    document.body.classList.add('mobile-optimized');
+                    document.dispatchEvent(new CustomEvent('appReady'));
+                    return;
+                }
+
                 this.modules.particles = new ParticlesManager();
                 this.modules.cursor = new AdvancedCursor();
                 this.modules.animations = new AnimationManager();
