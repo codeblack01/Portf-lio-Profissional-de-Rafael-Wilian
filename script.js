@@ -1112,27 +1112,49 @@ class WhatsAppCTA {
         this.bindEvents();
     }
 
+    resolveRepoBase() {
+        const parts = location.pathname.split('/').filter(Boolean);
+        if (location.hostname.endsWith('github.io') && parts.length > 0) {
+            // Primeiro segmento é o nome do repositório em GitHub Pages (project pages)
+            return '/' + parts[0];
+        }
+        return '';
+    }
+
+    resolveThankYouUrl() {
+        const repoBase = this.resolveRepoBase();
+        if (repoBase) {
+            // GitHub Pages (project page)
+            return `${location.origin}${repoBase}/rafael/thank-you.html`;
+        }
+        // Ambiente local ou hosting próprio
+        if (location.pathname.includes('/rafael/')) {
+            return './thank-you.html';
+        }
+        return './rafael/thank-you.html';
+    }
+
     bindEvents() {
         this.links.forEach((el) => {
             el.addEventListener('click', (e) => {
                 const href = el.getAttribute('href') || el.dataset.whatsapp || el.dataset.href;
                 if (!href) return;
 
-                // Tenta abrir o WhatsApp em nova aba
+                // Tenta abrir em nova aba
                 const win = window.open(href, '_blank', 'noopener');
 
-                // Fallback: se pop-up for bloqueado, navega na mesma aba e não tenta redirecionar
+                // Se pop-up for bloqueado, navega na mesma aba e não redireciona
                 if (!win) {
                     window.location.href = href;
                     return;
                 }
 
-                // Mantém a página atual e redireciona para "thank-you" depois
+                // Impede navegação do link atual e redireciona para "obrigado"
                 e.preventDefault();
                 setTimeout(() => {
-                    window.location.href = './thank-you.html';
-                }, 400);
-            });
+                    window.location.href = this.resolveThankYouUrl();
+                }, 300);
+            }, { passive: false });
         });
     }
 }
@@ -1159,7 +1181,6 @@ class App {
             this.modules.state = new AppState();
             this.modules.performance = new PerformanceOptimizer();
             this.modules.navigation = new NavigationManager();
-            this.modules.whatsapp = new WhatsAppCTA();
 
             const isMobile = this.modules.state?.isMobile ?? (window.innerWidth <= 768);
 
