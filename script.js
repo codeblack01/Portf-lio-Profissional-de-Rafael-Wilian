@@ -632,196 +632,13 @@ class NavigationManager {
 // ===== SISTEMA DE FORMULÁRIO AVANÇADO =====
 class FormManager {
     constructor() {
-        this.contactForm = document.getElementById('contact-form');
-        this.externalEndpoint = this.contactForm?.getAttribute('action') || null;
-        this.useExternalService = this.externalEndpoint && /formsubmit\.co/i.test(this.externalEndpoint);
-        this.init();
-    }
-
-    init() {
-        if (this.contactForm) {
-            this.setupFormValidation();
-            this.setupFormSubmission();
-        }
-    }
-
-    setupFormValidation() {
-          // Ignorar inputs hidden e honeypot para não travar
-        const inputs = this.contactForm.querySelectorAll('input, textarea');
-        
-        inputs.forEach(input => {
-            if (input.type === 'hidden' || input.name === '_honey' || input.offsetParent === null) return;
-            input.addEventListener('blur', () => this.validateField(input));
-            input.addEventListener('input', () => this.clearError(input));
-        });
-    }
-
-    validateField(field) {
-        const value = field.value.trim();
-        let isValid = true;
-        let errorMessage = '';
-
-        switch(field.type) {
-            case 'email':
-                isValid = this.isValidEmail(value);
-                errorMessage = 'Por favor, insira um email válido.';
-                break;
-            case 'text':
-                isValid = value.length >= 2;
-                errorMessage = 'Este campo deve ter pelo menos 2 caracteres.';
-                break;
-            default:
-                isValid = value.length > 0;
-                errorMessage = 'Este campo é obrigatório.';
-        }
-
-        if (!isValid && value.length > 0) {
-            this.showError(field, errorMessage);
-        } else {
-            this.clearError(field);
-        }
-
-        return isValid;
-    }
-
-    isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    showError(field, message) {
-        this.clearError(field);
-        
-        field.classList.add('error');
-        
-        const errorElement = document.createElement('div');
-        errorElement.className = 'error-message';
-        errorElement.textContent = message;
-        errorElement.style.cssText = `
-            color: #ff6b6b;
-            font-size: 0.8rem;
-            margin-top: 5px;
-        `;
-        
-        field.parentNode.appendChild(errorElement);
-    }
-
-    clearError(field) {
-        field.classList.remove('error');
-        const existingError = field.parentNode.querySelector('.error-message');
-        if (existingError) {
-            existingError.remove();
-        }
-    }
-
-    setupFormSubmission() {
-        this.contactForm.addEventListener('submit', async (e) => {
-            const isValid = this.validateForm();
-            if (!isValid) {
-                e.preventDefault();
-                return;
-            }
-
-            const action = this.contactForm.getAttribute('action') || '';
-            if (/formsubmit\.co/i.test(action)) {
-                const submitButton = this.contactForm.querySelector('button[type="submit"]');
-                if (submitButton) {
-                    const originalText = submitButton.innerHTML;
-                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-                    submitButton.disabled = true;
-                }
-
-                // Envio nativo para respeitar o redirect via _next
-                return; // Allow form to submit naturally
-            }
-
-            // Fluxo interno (se houver)
-            e.preventDefault();
-            await this.submitForm();
-        });
+        // Formulário removido - stub sem lógica
+        this.contactForm = null;
     }
 
     validateForm() {
-        // Somente validar campos visíveis e não-ocultos
+        if (!this.contactForm) return;
         const inputs = this.contactForm.querySelectorAll('input, textarea');
-        let isValid = true;
-
-        inputs.forEach(input => {
-            if (input.type === 'hidden' || input.name === '_honey' || input.offsetParent === null) return;
-            if (!this.validateField(input)) {
-                isValid = false;
-            }
-        });
-
-        return isValid;
-    }
-
-    async submitForm() {
-        const submitButton = this.contactForm.querySelector('button[type="submit"]');
-        const originalText = submitButton ? submitButton.innerHTML : null;
-
-        if (submitButton) {
-            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-            submitButton.disabled = true;
-        }
-
-        try {
-            await this.simulateAPICall();
-            this.showSuccessMessage();
-        } catch (error) {
-            this.showErrorMessage();
-        } finally {
-            if (submitButton) {
-                submitButton.disabled = false;
-                if (originalText !== null) {
-                    submitButton.innerHTML = originalText;
-                }
-            }
-        }
-    }
-
-    async simulateAPICall() {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                // Simular 90% de chance de sucesso
-                Math.random() > 0.1 ? resolve() : reject(new Error('Falha simulada'));
-            }, 2000);
-        });
-    }
-
-    showSuccessMessage() {
-        this.showMessage('Mensagem enviada com sucesso! Entrarei em contato em breve.', 'success');
-    }
-
-    showErrorMessage() {
-        this.showMessage('Erro ao enviar mensagem. Tente novamente ou entre em contato diretamente pelo WhatsApp.', 'error');
-    }
-
-    showMessage(text, type) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `form-message ${type}`;
-        messageDiv.textContent = text;
-        messageDiv.style.cssText = `
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 10px;
-            text-align: center;
-            font-weight: 500;
-            background: ${type === 'success' ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 107, 107, 0.1)'};
-            color: ${type === 'success' ? '#00ff88' : '#ff6b6b'};
-            border: 1px solid ${type === 'success' ? '#00ff88' : '#ff6b6b'};
-        `;
-
-        // Evitar acúmulo de mensagens
-        const oldMsg = this.contactForm.querySelector('.form-message');
-        if (oldMsg) oldMsg.remove();
-
-        this.contactForm.insertBefore(messageDiv, this.contactForm.firstChild);
-
-        // Remover após 5 segundos
-        setTimeout(() => {
-            messageDiv.remove();
-        }, 5000);
     }
 }
 
@@ -1287,6 +1104,39 @@ class PerformanceOptimizer {
     }
 }
 
+// ===== SISTEMA DE CTA DO WHATSAPP =====
+class WhatsAppCTA {
+    constructor() {
+        this.selectors = ['a.js-whatsapp', 'button.js-whatsapp', 'a[href*="wa.me"]'];
+        this.links = document.querySelectorAll(this.selectors.join(','));
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        this.links.forEach((el) => {
+            el.addEventListener('click', (e) => {
+                const href = el.getAttribute('href') || el.dataset.whatsapp || el.dataset.href;
+                if (!href) return;
+
+                // Tenta abrir o WhatsApp em nova aba
+                const win = window.open(href, '_blank', 'noopener');
+
+                // Fallback: se pop-up for bloqueado, navega na mesma aba e não tenta redirecionar
+                if (!win) {
+                    window.location.href = href;
+                    return;
+                }
+
+                // Mantém a página atual e redireciona para "thank-you" depois
+                e.preventDefault();
+                setTimeout(() => {
+                    window.location.href = './thank-you.html';
+                }, 400);
+            });
+        });
+    }
+}
+
 // ===== INICIALIZAÇÃO DA APLICAÇÃO =====
 class App {
     constructor() {
@@ -1309,7 +1159,7 @@ class App {
             this.modules.state = new AppState();
             this.modules.performance = new PerformanceOptimizer();
             this.modules.navigation = new NavigationManager();
-            // Removido: this.modules.form = new FormManager();
+            this.modules.whatsapp = new WhatsAppCTA();
 
             const isMobile = this.modules.state?.isMobile ?? (window.innerWidth <= 768);
 
