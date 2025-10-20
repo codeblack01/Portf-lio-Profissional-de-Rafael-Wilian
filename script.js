@@ -57,16 +57,8 @@ class AppState {
     }
 
     updateMobileFeatures() {
-        const mobileElements = document.querySelectorAll('.mobile-only');
-        const desktopElements = document.querySelectorAll('.desktop-only');
-        
-        if (this.isMobile) {
-            mobileElements.forEach(el => el.style.display = 'block');
-            desktopElements.forEach(el => el.style.display = 'none');
-        } else {
-            mobileElements.forEach(el => el.style.display = 'none');
-            desktopElements.forEach(el => el.style.display = 'block');
-        }
+        // Evitar manipular display inline para não esconder conteúdos por engano
+        document.body.classList.toggle('mobile-optimized', this.isMobile);
     }
 
     updateActiveSection() {
@@ -1104,34 +1096,40 @@ class PerformanceOptimizer {
     }
 }
 
+// ===== SISTEMA DE NOTIFICAÇÃO =====
+class Notifier {
+    constructor() {
+        this.el = document.getElementById('toast-notification');
+        if (!this.el) {
+            this.el = document.createElement('div');
+            this.el.id = 'toast-notification';
+            this.el.className = 'toast';
+            this.el.setAttribute('role', 'status');
+            this.el.setAttribute('aria-live', 'polite');
+            document.body.appendChild(this.el);
+        }
+        this.hideTimer = null;
+    }
+
+    show(message, type = 'success', duration = 2500) {
+        this.el.textContent = message;
+        this.el.classList.remove('toast--success', 'toast--error');
+        this.el.classList.add(type === 'error' ? 'toast--error' : 'toast--success');
+        this.el.classList.add('toast--show');
+        clearTimeout(this.hideTimer);
+        this.hideTimer = setTimeout(() => {
+            this.el.classList.remove('toast--show');
+        }, duration);
+    }
+}
+
 // ===== SISTEMA DE CTA DO WHATSAPP =====
 class WhatsAppCTA {
     constructor() {
+        this.notifier = new Notifier();
         this.selectors = ['a.js-whatsapp', 'button.js-whatsapp', 'a[href*="wa.me"]'];
         this.links = document.querySelectorAll(this.selectors.join(','));
         this.bindEvents();
-    }
-
-    resolveRepoBase() {
-        const parts = location.pathname.split('/').filter(Boolean);
-        if (location.hostname.endsWith('github.io') && parts.length > 0) {
-            // Primeiro segmento é o nome do repositório em GitHub Pages (project pages)
-            return '/' + parts[0];
-        }
-        return '';
-    }
-
-    resolveThankYouUrl() {
-        const repoBase = this.resolveRepoBase();
-        if (repoBase) {
-            // GitHub Pages (project page)
-            return `${location.origin}${repoBase}/rafael/thank-you.html`;
-        }
-        // Ambiente local ou hosting próprio
-        if (location.pathname.includes('/rafael/')) {
-            return './thank-you.html';
-        }
-        return './rafael/thank-you.html';
     }
 
     bindEvents() {
@@ -1140,20 +1138,16 @@ class WhatsAppCTA {
                 const href = el.getAttribute('href') || el.dataset.whatsapp || el.dataset.href;
                 if (!href) return;
 
-                // Tenta abrir em nova aba
                 const win = window.open(href, '_blank', 'noopener');
 
-                // Se pop-up for bloqueado, navega na mesma aba e não redireciona
-                if (!win) {
-                    window.location.href = href;
-                    return;
-                }
-
-                // Impede navegação do link atual e redireciona para "obrigado"
                 e.preventDefault();
-                setTimeout(() => {
-                    window.location.href = this.resolveThankYouUrl();
-                }, 300);
+                this.notifier.show('Tudo certo! Abrimos o WhatsApp para você.', 'success');
+
+                if (!win) {
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 300);
+                }
             }, { passive: false });
         });
     }
@@ -1181,16 +1175,29 @@ class App {
             this.modules.state = new AppState();
             this.modules.performance = new PerformanceOptimizer();
             this.modules.navigation = new NavigationManager();
+            this.modules.whatsapp = new WhatsAppCTA();
 
             const isMobile = this.modules.state?.isMobile ?? (window.innerWidth <= 768);
 
-            const initHeavy = () => {
-                if (isMobile) {
-                    document.body.classList.add('mobile-optimized');
-                    document.dispatchEvent(new CustomEvent('appReady'));
-                    return;
-                }
+            // Mobile: inicia já, sem esperar ocioso
+            if (isMobile) {
+                document.body.classList.add('mobile-optimized');
 
+                // Módulos essenciais no mobile
+                this.modules.portfolio = new PortfolioManager();
+                this.modules.video = new VideoManager();
+
+                // Otimizações leves
+                this.modules.performance.reduceAnimations?.();
+                this.modules.performance.optimizeImages?.();
+
+                console.log('📱 Mobile pronto com módulos essenciais!');
+                document.dispatchEvent(new CustomEvent('appReady'));
+                return;
+            }
+
+            // Desktop: adiar módulos pesados para ocioso
+            const initHeavy = () => {
                 this.modules.particles = new ParticlesManager();
                 this.modules.cursor = new AdvancedCursor();
                 this.modules.animations = new AnimationManager();
@@ -1199,7 +1206,7 @@ class App {
                 this.modules.slider = new AutoSlider();
                 this.modules.video = new VideoManager();
 
-                console.log('🚀 Aplicação inicializada com módulos visuais!');
+                console.log('💻 Desktop pronto com módulos visuais!');
                 document.dispatchEvent(new CustomEvent('appReady'));
             };
 

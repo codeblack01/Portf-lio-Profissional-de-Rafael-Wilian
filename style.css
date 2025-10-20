@@ -27,6 +27,8 @@
 
 html {
     scroll-behavior: smooth;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 body {
@@ -34,6 +36,7 @@ body {
     background-color: var(--dark);
     color: var(--light);
     line-height: 1.6;
+    max-width: 100%;
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
     text-rendering: optimizeLegibility;
@@ -1491,6 +1494,31 @@ footer {
     font-size: 1rem;
 }
 
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f0f0f;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  z-index: 10000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  font-size: 0.95rem;
+}
+.toast--show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(-6px);
+}
+.toast--success { border: 1px solid #3fb950; }
+.toast--error { border: 1px solid #ef4444; }
+
 /* WhatsApp Float */
 .whatsapp-float {
     position: fixed;
@@ -1630,7 +1658,15 @@ footer {
     h3 { font-size: clamp(1.1rem, 3.8vw, 1.5rem); }
 
     #particles-js { display: none !important; }
-    .custom-cursor, .cursor-follower { display: none !important; }
+    .custom-cursor, .cursor-follower, .cursor-dot, .cursor-outline { display: none !important; }
+
+    img, video, iframe { max-width: 100%; height: auto; }
+    
+    p, li { overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
+
+    /* Visibilidade com classe mobile-optimized */
+    .mobile-optimized .desktop-only { display: none !important; }
+    .mobile-optimized .mobile-only { display: initial !important; }
 
     /* Overlay do menu mobile */
     .nav-links {
@@ -1824,6 +1860,10 @@ footer {
     .videos-grid {
         grid-template-columns: 1fr;
     }
+    /* Grids em 1 coluna no mobile */
+    .portfolio-grid { grid-template-columns: 1fr; }
+    .services-grid { grid-template-columns: 1fr; }
+    .dashboard-grid { grid-template-columns: 1fr; }
 }
 
 @media (min-width: 1024px) {
