@@ -898,52 +898,198 @@ class VideoManager {
     init() {
         this.setupVideoOptimizations();
         this.setupLazyLoading();
+        this.setupCustomOverlays();
     }
 
     setupVideoOptimizations() {
+        const isMobile = window.innerWidth <= 768 || document.body.classList.contains('mobile-optimized');
+
         this.videos.forEach(video => {
-            // Configurações para performance
-            video.preload = 'metadata';
+            // Configurações para performance e bloqueio de áudio
+            video.preload = isMobile ? 'none' : 'metadata';
             video.playsInline = true;
-            
-            // Controles para vídeos não autoplay
-            if (!video.hasAttribute('autoplay')) {
-                video.setAttribute('controls', 'true');
+
+            // Forçar mudo e ocultar quaisquer controles
+            video.muted = true;
+            video.defaultMuted = true;
+            video.volume = 0;
+            video.removeAttribute('controls');
+            video.controls = false;
+            video.setAttribute('muted', 'true');
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('controlsList', 'nodownload noplaybackrate nofullscreen');
+            video.setAttribute('disablePictureInPicture', '');
+            if (typeof video.disableRemotePlayback !== 'undefined') {
+                video.disableRemotePlayback = true;
             }
 
-            // Event listeners para melhor UX
-            video.addEventListener('click', () => this.togglePlay(video));
-            video.addEventListener('loadeddata', () => this.onVideoLoaded(video));
+            // No mobile, evitar autoplay/loop
+            if (isMobile) {
+                video.removeAttribute('autoplay');
+                video.removeAttribute('loop');
+            }
+
+            // Event listeners para garantir mudo permanente
+            const enforceMute = () => {
+                video.muted = true;
+                video.defaultMuted = true;
+                video.volume = 0;
+                video.removeAttribute('controls');
+                video.controls = false;
+            };
+
+            video.addEventListener('volumechange', enforceMute);
+            video.addEventListener('play', enforceMute);
+            video.addEventListener('loadeddata', () => {
+                enforceMute();
+                this.onVideoLoaded(video);
+            });
+
+            // Remover evento de clique direto no vídeo (será tratado pelo overlay)
+            // video.addEventListener('click', () => this.togglePlay(video));
         });
 
-        // Configurar vídeos de autoplay
-        const autoplayVideos = document.querySelectorAll('.manychat-media video, .videos-grid video');
-        autoplayVideos.forEach(video => {
-            this.setupAutoplayVideo(video);
-        });
+        // Configurar vídeos de autoplay somente no desktop
+        if (!isMobile) {
+            const autoplayVideos = document.querySelectorAll('.manychat-media video, .videos-grid video');
+            autoplayVideos.forEach(video => {
+                this.setupAutoplayVideo(video);
+            });
+        }
     }
 
     setupAutoplayVideo(video) {
+        // Evitar autoplay em dispositivos móveis
+        if (window.innerWidth <= 768 || document.body.classList.contains('mobile-optimized')) {
+            video.removeAttribute('autoplay');
+            video.removeAttribute('loop');
+            // Sempre mudo e sem controles
+            video.muted = true;
+            video.defaultMuted = true;
+            video.volume = 0;
+            video.removeAttribute('controls');
+            video.controls = false;
+            return;
+        }
+
         video.setAttribute('autoplay', 'true');
         video.setAttribute('muted', 'true');
         video.setAttribute('loop', 'true');
         video.setAttribute('playsinline', 'true');
         video.removeAttribute('controls');
+        video.controls = false;
+        video.setAttribute('controlsList', 'nodownload noplaybackrate nofullscreen');
+        video.setAttribute('disablePictureInPicture', '');
+        if (typeof video.disableRemotePlayback !== 'undefined') {
+            video.disableRemotePlayback = true;
+        }
 
         // Tentar reproduzir e tratar erros
         video.play().catch(function(error) {
             console.log('Autoplay prevented:', error);
-            // Fallback: mostrar controles se autoplay falhar
-            video.setAttribute('controls', 'true');
+            // Fallback: manter sem controles e mudo
+            video.muted = true;
+            video.defaultMuted = true;
+            video.volume = 0;
+            video.removeAttribute('controls');
+            video.controls = false;
         });
     }
 
     togglePlay(video) {
+        const container = video.closest('.video-item');
+        const playBtn = container?.querySelector('.video-play-btn');
+        const icon = playBtn?.querySelector('i');
+        
         if (video.paused) {
-            video.play();
+            video.play().catch(e => console.log('Autoplay prevented:', e));
+            container?.classList.remove('paused');
+            container?.classList.add('loading');
+            
+            if (icon) {
+                icon.className = 'fas fa-pause';
+                playBtn.classList.add('playing');
+            }
         } else {
             video.pause();
+            container?.classList.add('paused');
+            container?.classList.remove('loading');
+            
+            if (icon) {
+                icon.className = 'fas fa-play';
+                playBtn.classList.remove('playing');
+            }
         }
+    }
+
+    setupCustomOverlays() {
+        const videos = document.querySelectorAll('video');
+        
+        videos.forEach(video => {
+            const container = video.closest('.video-item');
+            if (!container) return;
+
+            // Criar overlay se não existir
+            let overlay = container.querySelector('.video-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.className = 'video-overlay';
+                
+                const playBtn = document.createElement('button');
+                playBtn.className = 'video-play-btn';
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                
+                overlay.appendChild(playBtn);
+                container.appendChild(overlay);
+
+                // Evento de clique no botão
+                playBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.togglePlay(video);
+                });
+                
+                // Evento de clique no overlay
+                overlay.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.togglePlay(video);
+                });
+            }
+
+            // Estados do vídeo
+            video.addEventListener('play', () => {
+                container.classList.remove('paused', 'loading');
+                const icon = container.querySelector('.video-play-btn i');
+                if (icon) {
+                    icon.className = 'fas fa-pause';
+                    container.querySelector('.video-play-btn').classList.add('playing');
+                }
+            });
+
+            video.addEventListener('pause', () => {
+                container.classList.add('paused');
+                container.classList.remove('loading');
+                const icon = container.querySelector('.video-play-btn i');
+                if (icon) {
+                    icon.className = 'fas fa-play';
+                    container.querySelector('.video-play-btn').classList.remove('playing');
+                }
+            });
+
+            video.addEventListener('waiting', () => {
+                container.classList.add('loading');
+            });
+
+            video.addEventListener('canplay', () => {
+                container.classList.remove('loading');
+            });
+
+            // Estado inicial
+            if (video.paused) {
+                container.classList.add('paused');
+            }
+        });
     }
 
     onVideoLoaded(video) {
@@ -1012,6 +1158,7 @@ class PerformanceOptimizer {
         this.optimizeAnimations();
         this.setupResourceManagement();
         this.optimizeImages();
+        this.optimizeEmbeds();
     }
 
     optimizeImages() {
@@ -1019,6 +1166,13 @@ class PerformanceOptimizer {
         imgs.forEach(img => {
             if (!img.hasAttribute('loading')) img.setAttribute('loading', 'lazy');
             if (!img.hasAttribute('decoding')) img.setAttribute('decoding', 'async');
+        });
+    }
+
+    optimizeEmbeds() {
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach(frame => {
+            if (!frame.hasAttribute('loading')) frame.setAttribute('loading', 'lazy');
         });
     }
 

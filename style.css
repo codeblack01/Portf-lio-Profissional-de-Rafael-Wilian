@@ -1279,6 +1279,97 @@ header.scrolled {
     transform: scale(1.02);
 }
 
+/* Custom Video Overlay */
+.video-item {
+    position: relative;
+    cursor: pointer;
+}
+
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 15px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.video-item:hover .video-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.video-item.paused .video-overlay {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.5);
+    pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+    /* No mobile não há hover, garantimos clique sempre quando pausado */
+    .video-item .video-overlay { pointer-events: none; }
+    .video-item.paused .video-overlay { pointer-events: auto; }
+}
+
+
+.video-play-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.video-play-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: scale(1.1);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.video-play-btn i {
+    font-size: 2rem;
+    color: var(--dark);
+    margin-left: 4px; /* Ajuste visual para ícone de play */
+}
+
+.video-play-btn.playing i {
+    margin-left: 0;
+}
+
+/* Estado de loading */
+.video-item.loading .video-overlay {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.video-loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 /* Tools Section */
 .tools {
     background-color: var(--dark-light);
@@ -1627,9 +1718,13 @@ footer {
     }
 
     .mobile-menu,
-    .mobile-nav,
     .mobile-hero-stats {
         display: block;
+    }
+
+    /* Removendo barra inferior de navegação no mobile */
+    .mobile-nav {
+        display: none !important;
     }
     
     .mobile-quick-actions {
@@ -1637,32 +1732,28 @@ footer {
     }
     
     .container {
-        padding: 0 14px;
-    }
-
-    section {
-        padding: 80px 0;
-    }
-
-    .service-card,
-    .dashboard-card,
-    .portfolio-item,
-    .manychat-feature {
-        padding: 16px;
-        border-radius: 14px;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        padding: 0 14p px rgba(0,0,0,0.3);
     }
 
     h1 { font-size: clamp(2rem, 6.2vw, 3rem); }
     h2 { font-size: clamp(1.6rem, 5.2vw, 2.4rem); }
     h3 { font-size: clamp(1.1rem, 3.8vw, 1.5rem); }
 
+    /* Destaque visual para reforçar autoridade no mobile */
+    .typing-text {
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        font-weight: 800;
+    }
+
     #particles-js { display: none !important; }
     .custom-cursor, .cursor-follower, .cursor-dot, .cursor-outline { display: none !important; }
 
     img, video, iframe { max-width: 100%; height: auto; }
     
-    p, li { overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
+    p { overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
 
     /* Visibilidade com classe mobile-optimized */
     .mobile-optimized .desktop-only { display: none !important; }
@@ -1736,6 +1827,11 @@ footer {
         margin-bottom: 30px;
     }
 
+    /* Priorizar ação de WhatsApp no mobile */
+    .hero-buttons .btn.btn-secondary {
+        order: -1;
+    }
+
     .btn {
         width: 100%;
         max-width: 300px;
@@ -1762,6 +1858,21 @@ footer {
 
     .mobile-nav-item.active {
         transform: translateY(-5px);
+    }
+
+    /* Evitar quebra/hifenização nos rótulos da navegação mobile */
+    .mobile-nav-item span {
+        white-space: nowrap;
+        overflow-wrap: normal;
+        word-break: normal;
+        hyphens: none;
+    }
+
+    /* Microinterações discretas no mobile */
+    .service-card:active,
+    .portfolio-item:active,
+    .dashboard-card:active {
+        transform: translateY(-2px);
     }
 
     .about-content {
@@ -1834,8 +1945,8 @@ footer {
     }
 
     .whatsapp-float {
-        bottom: 80px;
-        right: 20px;
+        bottom: calc(25px + env(safe-area-inset-bottom));
+        right: calc(20px + env(safe-area-inset-right));
         width: 55px;
         height: 55px;
         font-size: 1.5rem;
